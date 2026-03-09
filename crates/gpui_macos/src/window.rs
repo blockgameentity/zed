@@ -623,7 +623,11 @@ impl MacWindow {
             }
 
             let mut style_mask;
-            if let Some(titlebar) = titlebar.as_ref() {
+            if !display_rounded_corners {
+                // NSBorderlessWindowMask (0) tells AppKit to draw no window frame at all,
+                // which is the only way to get truly square corners on macOS.
+                style_mask = NSWindowStyleMask::NSBorderlessWindowMask;
+            } else if let Some(titlebar) = titlebar.as_ref() {
                 style_mask =
                     NSWindowStyleMask::NSClosableWindowMask | NSWindowStyleMask::NSTitledWindowMask;
 
@@ -909,28 +913,6 @@ impl MacWindow {
                 native_window.makeKeyAndOrderFront_(nil);
             } else if show {
                 native_window.orderFront_(nil);
-            }
-
-            if !display_rounded_corners {
-                // setCornerMask: was removed in macOS 26 and was never available on NSPanel.
-                // Guard with respondsToSelector: to avoid an NSException propagating through
-                // the extern "C" boundary and aborting the process.
-                let set_corner_mask_sel = sel!(setCornerMask:);
-                let responds: BOOL =
-                    msg_send![native_window, respondsToSelector: set_corner_mask_sel];
-                if responds == YES {
-                    // NSWindowCornerMaskRectangular = 1 << 4
-                    let rectangular_mask: NSUInteger = 1 << 4;
-                    let _: () = msg_send![native_window, setCornerMask: rectangular_mask];
-                } else {
-                    // Fall back: zero the corner radius on the content-view layer.
-                    let content_view: id = native_window.contentView();
-                    content_view.setWantsLayer(YES);
-                    let layer: id = msg_send![content_view, layer];
-                    if !layer.is_null() {
-                        let _: () = msg_send![layer, setCornerRadius: 0.0f64];
-                    }
-                }
             }
 
             // Set the initial position of the window to the specified origin.
