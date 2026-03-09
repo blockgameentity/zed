@@ -306,6 +306,15 @@ unsafe fn build_window_class(name: &'static str, superclass: &Class) -> *const C
             sel!(canBecomeKeyWindow),
             yes as extern "C" fn(&Object, Sel) -> BOOL,
         );
+        // For NSBorderlessWindowMask windows AppKit defaults isMovableByWindowBackground to YES,
+        // which causes it to run a nested drag-tracking event loop on every mouseDown before
+        // delivering the click to the view. That loop blocks until mouse-up, hanging any click
+        // handler. GPUI drives window moves explicitly via performWindowDragWithEvent:, so we
+        // always return NO here.
+        decl.add_method(
+            sel!(isMovableByWindowBackground),
+            no as extern "C" fn(&Object, Sel) -> BOOL,
+        );
         decl.add_method(
             sel!(windowDidResize:),
             window_did_resize as extern "C" fn(&Object, Sel, id),
@@ -1698,6 +1707,10 @@ unsafe fn drop_window_state(object: &Object) {
 
 extern "C" fn yes(_: &Object, _: Sel) -> BOOL {
     YES
+}
+
+extern "C" fn no(_: &Object, _: Sel) -> BOOL {
+    NO
 }
 
 extern "C" fn dealloc_window(this: &Object, _: Sel) {
