@@ -606,6 +606,7 @@ impl MacWindow {
             display_id,
             window_min_size,
             tabbing_identifier,
+            display_rounded_corners,
         }: WindowParams,
         foreground_executor: ForegroundExecutor,
         background_executor: BackgroundExecutor,
@@ -908,6 +909,25 @@ impl MacWindow {
                 native_window.makeKeyAndOrderFront_(nil);
             } else if show {
                 native_window.orderFront_(nil);
+            }
+
+            if !display_rounded_corners {
+                // NSWindowCornerMask values: default rounded = (1<<0)|(1<<1)|(1<<2)|(1<<3),
+                // rectangular (no rounding) = (1<<4). Available on macOS 12+.
+                // On older versions we fall back to setting cornerRadius = 0 on the content view layer.
+                let macos_12 = NSOperatingSystemVersion::new(12, 0, 0);
+                if is_macos_version_at_least(macos_12) {
+                    // NSWindowCornerMaskRectangular = 1 << 4
+                    let rectangular_mask: NSUInteger = 1 << 4;
+                    let _: () = msg_send![native_window, setCornerMask: rectangular_mask];
+                } else {
+                    let content_view: id = native_window.contentView();
+                    content_view.setWantsLayer(YES);
+                    let layer: id = msg_send![content_view, layer];
+                    if !layer.is_null() {
+                        let _: () = msg_send![layer, setCornerRadius: 0.0f64];
+                    }
+                }
             }
 
             // Set the initial position of the window to the specified origin.

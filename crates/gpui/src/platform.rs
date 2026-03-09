@@ -1232,6 +1232,10 @@ pub struct WindowOptions {
 
     /// Tab group name, allows opening the window as a native tab on macOS 10.12+. Windows with the same tabbing identifier will be grouped together.
     pub tabbing_identifier: Option<String>,
+
+    /// Whether the window should have rounded corners. macOS only.
+    /// Defaults to `true`. Set to `false` to display square window corners.
+    pub display_rounded_corners: bool,
 }
 
 /// The variables that can be configured when creating a new window
@@ -1282,6 +1286,8 @@ pub struct WindowParams {
     pub window_min_size: Option<Size<Pixels>>,
     #[cfg(target_os = "macos")]
     pub tabbing_identifier: Option<String>,
+    #[cfg(target_os = "macos")]
+    pub display_rounded_corners: bool,
 }
 
 /// Represents the status of how a window should be opened.
@@ -1340,6 +1346,7 @@ impl Default for WindowOptions {
             window_min_size: None,
             window_decorations: None,
             tabbing_identifier: None,
+            display_rounded_corners: true,
         }
     }
 }
